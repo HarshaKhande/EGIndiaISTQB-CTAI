@@ -1,0 +1,115 @@
+Lab 1 - Segregate the systems  as Conventional ,ML  or GenAI
+•	Calculator
+•	ATM
+•	Netflix recommendation engine
+•	Spam email detector
+•	ChatGPT
+•	Google Maps route prediction
+•	Rule-based tax calculator
+•	Face recognition system
+•	Traditional search engine
+•	AI medical-image classifier
+Lab2 - Would you test ChatGPT in exactly the same way as a calculator?
+What factors would you consider for testing the Chat gpt as a llm model
+They should identify issues such as:
+•	probabilistic outputs
+•	multiple acceptable answers
+•	non-determinism
+•	test-oracle problems
+•	training-data dependency
+
+Lab 3 - Explore a Pretrained AI Model
+Tools
+•	Google Colab
+•	Hugging Face Transformers
+•	Python
+
+
+
+print("Hello")
+!pip install transformers
+from transformers import pipeline
+classifier = pipeline(
+    "sentiment-analysis",
+    model="distilbert-base-uncased-finetuned-sst-2-english"
+)
+
+1.	Simple positive and negative
+examples = [
+    "I love this product.",
+    "This application is terrible.",
+    "The service was excellent.",
+    "I hate using this software."
+]
+
+for text in examples:
+    print(text)
+    print(classifier(text))
+    print()
+2.	Negation testing
+
+examples = [
+    "This product is good.",
+    "This product is not good.",
+    "This product is not bad.",
+    "I don't hate this application.",
+    "I don't like this application."
+]
+
+for text in examples:
+    result = classifier(text)[0]
+
+    print("Input:", text)
+    print("Prediction:", result["label"])
+    print("Confidence:", round(result["score"], 4))
+print("-" * 50)
+
+
+Does adding just one word such as "not" correctly change the prediction??
+
+3.	Sarcasm testing
+examples = [
+    "Wonderful, the application crashed again.",
+    "Great job, you deleted all my files.",
+    "Amazing service. I waited only three hours.",
+    "Perfect. Another bug.",
+    "Fantastic, now nothing works."
+]
+
+for text in examples:
+    print(text, classifier(text))
+Humans understand that many of these are negative, but the model may see words like:
+•	wonderful
+•	great
+•	amazing
+•	perfect
+•	fantastic
+and predict POSITIVE.
+4.	Mixed sentiment
+examples = [
+    "The product looks beautiful, but it doesn't work properly.",
+    "The application is fast but very difficult to use.",
+    "Customer service was terrible, although the product is excellent.",
+    "I like the design, but I hate the performance.",
+    "The movie started badly but ended brilliantly."
+]
+
+for text in examples:
+    result = classifier(text)[0]
+
+    print("Input:", text)
+    print("Result:", result)
+print()
+Should the expected result be positive or negative?
+5.	Neutral statements
+examples = [
+    "The meeting starts at 10 AM.",
+    "The laptop is on the table.",
+    "Today is Monday.",
+    "The application has five buttons.",
+    "The package arrived yesterday."
+]
+
+for text in examples:
+    print(text, classifier(text))
+Check the answer 
