@@ -1,0 +1,679 @@
+# ISTQB CT-AI Hands-on Exercise 3.1.3
+# Supervised Learning - Classification
+
+# Import required libraries
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+# 1. Load the Iris dataset
+iris = load_iris()
+X = iris.data             # Input features
+y = iris.target           # Expected flower species
+
+# 2. Split data: 60% training, 20% validation, 20% test
+X_train_val, X_test, y_train_val, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=42, stratify=y
+)
+
+X_train, X_val, y_train, y_val = train_test_split(
+    X_train_val, y_train_val,
+    test_size=0.25, random_state=42, stratify=y_train_val
+)
+
+print("Training samples:", len(X_train))
+print("Validation samples:", len(X_val))
+print("Test samples:", len(X_test))
+
+# 3. Train a classification model
+model = DecisionTreeClassifier(max_depth=2, random_state=42)
+model.fit(X_train, y_train)
+
+# 4. Evaluate using VALIDATION data
+val_predictions = model.predict(X_val)
+val_accuracy = accuracy_score(y_val, val_predictions)
+
+print("\nInitial Validation Accuracy:", val_accuracy)
+
+# 5. Tune the hyperparameter using validation data
+best_accuracy = -1
+best_depth = None
+
+for depth in [1, 2, 3, 4, 5]:
+    candidate = DecisionTreeClassifier(
+        max_depth=depth, random_state=42
+    )
+    candidate.fit(X_train, y_train)
+
+    predictions = candidate.predict(X_val)
+    accuracy = accuracy_score(y_val, predictions)
+
+    print("Depth:", depth, "Validation Accuracy:", accuracy)
+
+    if accuracy > best_accuracy:
+        best_accuracy = accuracy
+        best_depth = depth
+
+print("\nBest Depth:", best_depth)
+print("Best Validation Accuracy:", best_accuracy)
+
+# 6. Retrain using selected hyperparameter
+# Combine training and validation data
+final_model = DecisionTreeClassifier(
+    max_depth=best_depth, random_state=42
+)
+final_model.fit(X_train_val, y_train_val)
+
+# 7. Test using INDEPENDENT test data
+test_predictions = final_model.predict(X_test)
+test_accuracy = accuracy_score(y_test, test_predictions)
+
+print("\nIndependent Test Accuracy:", test_accuracy)
+print("\nClassification Report:")
+print(classification_report(
+    y_test, test_predictions, target_names=iris.target_names
+))
+
+# 8. Compare validation and test results
+print("\nValidation Accuracy:", best_accuracy)
+print("Test Accuracy:", test_accuracy)
+print("Accuracy Difference:", abs(best_accuracy - test_accuracy))
+
+# 9. Check acceptance criteria
+required_accuracy = 0.90
+
+if test_accuracy >= required_accuracy:
+    print("PASS - Model meets test accuracy requirement")
+else:
+    print("FAIL - Model does not meet accuracy requirement")
+
+
+# ============================================================
+# ISTQB CT-AI - 3.2.2 HANDS-ON EXERCISE
+# DATA PREPARATION FOR SUPERVISED MACHINE LEARNING
+# ============================================================
+
+# STEP 1: IMPORT LIBRARIES
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+
+# ============================================================
+# STEP 2: LOAD DATASET
+# ============================================================
+
+# Load the built-in breast cancer dataset
+data = load_breast_cancer(as_frame=True)
+
+# Convert dataset into Pandas DataFrame
+df = data.frame.copy()
+
+# Display first five records
+print("\nFirst 5 Records:")
+print(df.head())
+
+# Display dataset shape
+print("\nDataset Shape:", df.shape)
+
+# Display data types
+print("\nData Types:")
+print(df.dtypes)
+
+# ============================================================
+# STEP 3: INTRODUCE SAMPLE DATA QUALITY ISSUES
+# ============================================================
+
+# Add missing values for practice
+df.loc[0:9, "mean radius"] = np.nan
+
+# Add duplicate rows for practice
+df = pd.concat(
+    [df, df.iloc[:5]],
+    ignore_index=True
+)
+
+print("\nMissing Values Before Cleaning:")
+print(df.isnull().sum())
+
+print("\nDuplicates Before Cleaning:")
+print(df.duplicated().sum())
+
+# ============================================================
+# STEP 4: DATA CLEANING
+# ============================================================
+
+# Remove duplicate records
+df = df.drop_duplicates().reset_index(drop=True)
+
+print("\nDuplicates After Cleaning:")
+print(df.duplicated().sum())
+
+# Missing values will be handled later using median imputation
+# after splitting the data to avoid data leakage.
+
+# ============================================================
+# STEP 5: EXPLORATORY DATA ANALYSIS (EDA)
+# ============================================================
+
+# Display statistical information
+print("\nStatistical Summary:")
+print(df.describe())
+
+# Display target distribution
+print("\nTarget Distribution:")
+print(df["target"].value_counts())
+
+# Plot target classes
+df["target"].value_counts().sort_index().plot(
+    kind="bar"
+)
+
+plt.title("Breast Cancer Class Distribution")
+plt.xlabel("Class (0 = Malignant, 1 = Benign)")
+plt.ylabel("Number of Samples")
+plt.xticks(rotation=0)
+plt.tight_layout()
+plt.show()
+
+# Plot relationship between two features
+plt.scatter(
+    df["mean radius"],
+    df["mean texture"],
+    c=df["target"],
+    alpha=0.6
+)
+
+plt.title("Mean Radius vs Mean Texture")
+plt.xlabel("Mean Radius")
+plt.ylabel("Mean Texture")
+plt.colorbar(label="Target Class")
+plt.tight_layout()
+plt.show()
+
+# ============================================================
+# STEP 6: FEATURE SELECTION
+# ============================================================
+
+# Select four numerical input features
+features = [
+    "mean radius",
+    "mean texture",
+    "mean perimeter",
+    "mean area"
+]
+
+# X contains input features
+X = df[features]
+
+# y contains output labels
+y = df["target"]
+
+print("\nSelected Features:")
+print(X.head())
+
+print("\nTarget Values:")
+print(y.head())
+
+# ============================================================
+# STEP 7: SPLIT DATASET
+# ============================================================
+
+# Split dataset into training+validation and test data
+X_train_val, X_test, y_train_val, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.20,
+    random_state=42,
+    stratify=y
+)
+
+# Split training+validation into training and validation
+X_train, X_val, y_train, y_val = train_test_split(
+    X_train_val,
+    y_train_val,
+    test_size=0.25,
+    random_state=42,
+    stratify=y_train_val
+)
+
+print("\nTraining Samples:", len(X_train))
+print("Validation Samples:", len(X_val))
+print("Testing Samples:", len(X_test))
+
+# ============================================================
+# STEP 8: DATA PREPROCESSING
+# ============================================================
+
+# Create preprocessing pipeline
+preprocessor = Pipeline([
+    # Replace missing values using training-data median
+    ("imputer", SimpleImputer(strategy="median")),
+
+    # Standardize numerical feature values
+    ("scaler", StandardScaler())
+])
+
+# Learn preprocessing parameters using training data only
+X_train_ready = preprocessor.fit_transform(X_train)
+
+# Apply same transformations to validation data
+X_val_ready = preprocessor.transform(X_val)
+
+# Apply same transformations to test data
+X_test_ready = preprocessor.transform(X_test)
+
+print("\nTraining Data Shape:", X_train_ready.shape)
+print("Validation Data Shape:", X_val_ready.shape)
+print("Testing Data Shape:", X_test_ready.shape)
+
+# ============================================================
+# STEP 9: VERIFY DATA QUALITY
+# ============================================================
+
+# Check if any missing values remain
+print("\nMissing Values in Training Data:",
+      np.isnan(X_train_ready).sum())
+
+print("Missing Values in Validation Data:",
+      np.isnan(X_val_ready).sum())
+
+print("Missing Values in Testing Data:",
+      np.isnan(X_test_ready).sum())
+
+# Check transformed feature means
+print("\nTraining Feature Means:")
+print(np.mean(X_train_ready, axis=0))
+
+# Check transformed feature standard deviations
+print("\nTraining Feature Standard Deviations:")
+print(np.std(X_train_ready, axis=0))
+
+# ============================================================
+# STEP 10: SAVE PREPARED DATASETS
+# ============================================================
+
+# Convert processed arrays into DataFrames
+train_df = pd.DataFrame(
+    X_train_ready,
+    columns=features
+)
+
+val_df = pd.DataFrame(
+    X_val_ready,
+    columns=features
+)
+
+test_df = pd.DataFrame(
+    X_test_ready,
+    columns=features
+)
+
+# Add corresponding target labels
+train_df["target"] = y_train.to_numpy()
+val_df["target"] = y_val.to_numpy()
+test_df["target"] = y_test.to_numpy()
+
+# Export datasets to CSV files
+train_df.to_csv("prepared_training_data.csv", index=False)
+val_df.to_csv("prepared_validation_data.csv", index=False)
+test_df.to_csv("prepared_testing_data.csv", index=False)
+
+# Save fitted preprocessing pipeline for future use
+import joblib
+joblib.dump(preprocessor, "preprocessor.joblib")
+
+print("\nAll prepared datasets saved successfully!")
+
+print("\nPrepared Training Data:")
+print(train_df.head())
+
+print("\nDATA PREPARATION COMPLETED SUCCESSFULLY!")
+
+# Dataset is ready for supervised classification model training.
+
+
+
+# ISTQB CT-AI 3.3.2
+# Hands-on Lab: Evaluate ML Functional Performance Metrics
+
+# STEP 1: IMPORT REQUIRED LIBRARIES
+
+from sklearn.datasets import load_iris
+# Imports the built-in Iris flower dataset
+
+from sklearn.model_selection import train_test_split
+# Imports the function to split data into training and testing sets
+
+from sklearn.tree import DecisionTreeClassifier
+# Imports the Decision Tree machine learning classification algorithm
+
+from sklearn.metrics import accuracy_score
+# Imports the function to measure overall prediction accuracy
+
+from sklearn.metrics import precision_score
+# Imports the function to calculate precision
+
+from sklearn.metrics import recall_score
+# Imports the function to calculate recall
+
+from sklearn.metrics import f1_score
+# Imports the function to calculate F1-score
+
+from sklearn.metrics import confusion_matrix
+# Imports the function to create a confusion matrix
+
+from sklearn.metrics import classification_report
+# Imports a function to display all classification metrics
+
+
+# STEP 2: LOAD THE DATASET
+
+iris = load_iris()
+# Loads the Iris dataset containing 150 flower samples
+
+X = iris.data
+# Stores 4 input features: sepal length, sepal width,
+# petal length and petal width
+
+y = iris.target
+# Stores the expected flower species as 0, 1 or 2
+
+print("Total Samples:", len(X))
+# Displays the total number of flower samples
+
+print("Flower Categories:", iris.target_names)
+# Displays the three flower species
+
+
+# STEP 3: SPLIT TRAINING AND TEST DATA
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.20,    # Reserves 20% of data for testing
+    random_state=42,  # Ensures reproducible data splitting
+    stratify=y         # Preserves species proportions
+)
+
+print("Training Samples:", len(X_train))
+# Displays the number of samples used for training
+
+print("Testing Samples:", len(X_test))
+# Displays the number of samples reserved for testing
+
+
+# STEP 4: CREATE THE ML MODEL
+
+model = DecisionTreeClassifier(
+    max_depth=3,       # Limits how deep the tree can grow
+    random_state=42    # Makes model behaviour reproducible
+)
+# Creates a Decision Tree classification model
+
+
+# STEP 5: TRAIN THE MODEL
+
+model.fit(X_train, y_train)
+# Teaches the model using measurements and correct species labels
+
+print("Model Training Completed")
+
+
+# STEP 6: MAKE PREDICTIONS
+
+y_pred = model.predict(X_test)
+# Predicts flower species for the 30 unseen testing samples
+
+
+# STEP 7: CALCULATE ACCURACY
+
+accuracy = accuracy_score(y_test, y_pred)
+# Calculates correct predictions / total predictions
+
+
+# STEP 8: CALCULATE PRECISION
+
+precision = precision_score(
+    y_test, y_pred, average="macro", zero_division=0
+)
+# Calculates precision for each flower species
+# Then takes the average across all 3 species
+
+
+# STEP 9: CALCULATE RECALL
+
+recall = recall_score(
+    y_test, y_pred, average="macro", zero_division=0
+)
+# Calculates how many actual flowers of each species
+# were correctly identified, then averages across classes
+
+
+# STEP 10: CALCULATE F1-SCORE
+
+f1 = f1_score(
+    y_test, y_pred, average="macro", zero_division=0
+)
+# Calculates F1 for each class using precision and recall
+# Then averages the 3 class-specific F1-scores
+
+
+# STEP 11: DISPLAY PERFORMANCE METRICS
+
+print("\n===== MODEL PERFORMANCE =====")
+
+print("Accuracy :", round(accuracy * 100, 2), "%")
+# Displays overall accuracy as a percentage
+
+print("Precision:", round(precision * 100, 2), "%")
+# Displays macro-average precision as a percentage
+
+print("Recall   :", round(recall * 100, 2), "%")
+# Displays macro-average recall as a percentage
+
+print("F1-score :", round(f1 * 100, 2), "%")
+# Displays macro-average F1-score as a percentage
+
+
+# STEP 12: DISPLAY CONFUSION MATRIX
+
+cm = confusion_matrix(y_test, y_pred)
+# Counts correct and incorrect predictions for each species
+
+print("\n===== CONFUSION MATRIX =====")
+print(cm)
+# Prints a 3x3 matrix because the dataset has 3 classes
+
+
+# STEP 13: DISPLAY CLASSIFICATION REPORT
+
+print("\n===== CLASSIFICATION REPORT =====")
+
+print(classification_report(
+    y_test, y_pred,
+    target_names=iris.target_names,
+    zero_division=0
+))
+# Shows precision, recall, F1-score and support for each class
+
+
+# STEP 14: COMPARE EXPECTED AND ACTUAL RESULTS
+
+print("\n===== TEST EXECUTION RESULTS =====")
+
+for expected, predicted in zip(y_test, y_pred):
+    # Loops through expected and predicted labels together
+
+    expected_name = iris.target_names[expected]
+    # Converts the expected numeric label into a flower name
+
+    predicted_name = iris.target_names[predicted]
+    # Converts the predicted numeric label into a flower name
+
+    status = "PASS" if expected == predicted else "FAIL"
+    # PASS if prediction is correct, otherwise FAIL
+
+    print(
+        "Expected:", expected_name,
+        "| Predicted:", predicted_name,
+        "| Status:", status
+    )
+    # Displays the testing result for each flower
+
+# ISTQB CT-AI - Exercise 3.3.3
+# Comparing ML Models and Datasets
+
+# Step 1: Import libraries
+import time
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.datasets import load_iris, load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score
+)
+
+# Step 2: Load datasets
+datasets = {
+    "Iris": load_iris(),
+    "Breast Cancer": load_breast_cancer()
+}
+
+# Step 3: Define ML models
+models = {
+    "Decision Tree": DecisionTreeClassifier(
+        random_state=42
+    ),
+    "Random Forest": RandomForestClassifier(
+        n_estimators=100,
+        random_state=42
+    ),
+    "Logistic Regression": make_pipeline(
+        StandardScaler(),
+        LogisticRegression(max_iter=1000)
+    )
+}
+
+# Step 4: Store results
+results = []
+
+# Step 5: Loop through datasets
+for dataset_name, dataset in datasets.items():
+
+    X = dataset.data
+    y = dataset.target
+
+    # Split data into 80% training, 20% testing
+    X_train, X_test, y_train, y_test = (
+        train_test_split(
+            X, y,
+            test_size=0.2,
+            random_state=42,
+            stratify=y
+        )
+    )
+
+    # Step 6: Loop through ML models
+    for model_name, model in models.items():
+
+        # Record training start time
+        start_time = time.perf_counter()
+
+        # Train model
+        model.fit(X_train, y_train)
+
+        # Calculate training time
+        training_time = time.perf_counter() - start_time
+
+        # Predict test data
+        y_pred = model.predict(X_test)
+
+        # Calculate performance metrics
+        accuracy = accuracy_score(y_test, y_pred)
+
+        precision = precision_score(
+            y_test, y_pred, average="macro",
+            zero_division=0
+        )
+
+        recall = recall_score(
+            y_test, y_pred, average="macro",
+            zero_division=0
+        )
+
+        f1 = f1_score(
+            y_test, y_pred, average="macro",
+            zero_division=0
+        )
+
+        # Save results
+        results.append({
+            "Dataset": dataset_name,
+            "Model": model_name,
+            "Training Time (sec)": round(training_time, 6),
+            "Accuracy": round(accuracy * 100, 2),
+            "Precision": round(precision * 100, 2),
+            "Recall": round(recall * 100, 2),
+            "F1 Score": round(f1 * 100, 2)
+        })
+
+# Step 7: Display comparison table
+results_df = pd.DataFrame(results)
+
+print("\nML Model Comparison Results:")
+print(results_df.to_string(index=False))
+
+# Step 8: Visualize model accuracy
+plt.figure(figsize=(10, 5))
+
+for dataset_name in datasets:
+    subset = results_df[
+        results_df["Dataset"] == dataset_name
+    ]
+
+    plt.plot(
+        subset["Model"],
+        subset["Accuracy"],
+        marker="o",
+        label=dataset_name
+    )
+
+plt.xlabel("Machine Learning Model")
+plt.ylabel("Accuracy (%)")
+plt.title("ML Model Accuracy Comparison")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Step 9: Visualize training time
+results_df.pivot(
+    index="Model",
+    columns="Dataset",
+    values="Training Time (sec)"
+).plot(kind="bar", figsize=(10, 5))
+
+plt.title("ML Model Training Time Comparison")
+plt.ylabel("Training Time (seconds)")
+plt.xticks(rotation=0)
+plt.tight_layout()
+plt.show()
+
+
+
